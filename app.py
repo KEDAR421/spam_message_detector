@@ -5,6 +5,11 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 
+# Download punkt if not already available
+nltk.download('punkt')
+nltk.download('stopwords')
+
+
 # Ensure NLTK data is available
 try:
     stopwords.words('english')
