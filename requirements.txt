@@ -24,5 +24,3 @@ scikit-learn
 pandas
 numpy
 nltk
-punkt
-stopwords
