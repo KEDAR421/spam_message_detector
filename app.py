@@ -6,7 +6,8 @@ from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 
 # --- IMPORTANT FIX ---
-# Add the specific path where our build script downloaded the NLTK data
+# This line tells the app where to find the NLTK data on Render.
+# It MUST match the path in your build.sh file.
 nltk.data.path.append('/opt/render/project/src/.nltk_data')
 # --- END OF FIX ---
 
@@ -27,30 +28,22 @@ except FileNotFoundError:
 ps = PorterStemmer()
 
 def preprocess_text(text):
-    """
-    Cleans and preprocesses raw text.
-    """
     text = text.lower()
     text = nltk.word_tokenize(text)
-
     y = [i for i in text if i.isalnum()]
-
     text = [
         ps.stem(i) for i in y 
         if i not in stopwords.words('english') and i not in string.punctuation
     ]
-    
     return " ".join(text)
 
 # --- Routes ---
 @app.route('/', methods=['GET'])
 def home():
-    """Renders the main page."""
     return render_template('index.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    """Handles the prediction request from the HTML form."""
     prediction_text = "An error occurred."
     if clf and tfidf:
         try:
