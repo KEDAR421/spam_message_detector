@@ -6,8 +6,8 @@ Jinja2==3.1.6
 joblib==1.5.1
 MarkupSafe==3.0.2
 nltk==3.9.1
-numpy==2.3.2
-pandas==2.3.2
+numpy==2.0.1
+pandas==2.3.1
 python-dateutil==2.9.0.post0
 pytz==2025.2
 regex==2025.7.34
@@ -23,4 +23,3 @@ gunicorn
 scikit-learn
 pandas
 numpy
-nltk
