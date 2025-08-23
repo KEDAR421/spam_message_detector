@@ -5,17 +5,11 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 
-# Download punkt if not already available
-nltk.download('punkt')
-nltk.download('stopwords')
+# --- IMPORTANT FIX ---
+# Add the specific path where our build script downloaded the NLTK data
+nltk.data.path.append('/opt/render/project/src/.nltk_data')
+# --- END OF FIX ---
 
-
-# Ensure NLTK data is available
-try:
-    stopwords.words('english')
-except LookupError:
-    nltk.download('stopwords', quiet=True)
-    nltk.download('punkt', quiet=True)
 
 # Initialize Flask application
 app = Flask(__name__)
@@ -29,20 +23,18 @@ except FileNotFoundError:
     clf = None
     tfidf = None
 
-# --- Text Preprocessing Function (Your new logic) ---
+# --- Text Preprocessing Function ---
 ps = PorterStemmer()
 
 def preprocess_text(text):
     """
-    Cleans and preprocesses raw text using the new, detailed logic.
+    Cleans and preprocesses raw text.
     """
     text = text.lower()
     text = nltk.word_tokenize(text)
 
-    # Collect alphanumeric tokens
     y = [i for i in text if i.isalnum()]
 
-    # Remove stopwords and punctuation, then apply stemming
     text = [
         ps.stem(i) for i in y 
         if i not in stopwords.words('english') and i not in string.punctuation
