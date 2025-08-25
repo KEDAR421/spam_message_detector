@@ -1,24 +1,36 @@
 from flask import Flask, render_template, request
 import pickle
 import string
+import os
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
+from nltk.tokenize import word_tokenize
 
-# --- IMPORTANT FIX ---
-# This line tells the app where to find the NLTK data on Render.
-# It MUST match the path in your build.sh file.
-nltk.data.path.append('/opt/render/project/src/.nltk_data')
-# --- END OF FIX ---
+# ---------------- NLTK SETUP (Render-friendly) ----------------
+# Store NLTK data inside the repo path so it survives across runs.
+NLTK_DIR = "/opt/render/project/src/.nltk_data"
+os.makedirs(NLTK_DIR, exist_ok=True)
+nltk.data.path.append(NLTK_DIR)
 
+# Download required datasets (idempotent)
+for pkg in ["punkt", "punkt_tab", "stopwords"]:
+    try:
+        nltk.data.find(f"tokenizers/{'punkt_tab' if pkg=='punkt_tab' else 'punkt'}") if "punkt" in pkg \
+            else nltk.data.find("corpora/stopwords")
+    except LookupError:
+        nltk.download(pkg, download_dir=NLTK_DIR, quiet=True)
+# --------------------------------------------------------------
 
 # Initialize Flask application
 app = Flask(__name__)
 
 # --- Load Model & Vectorizer ---
 try:
-    clf = pickle.load(open('model.pkl', 'rb'))
-    tfidf = pickle.load(open('vectorizer.pkl', 'rb'))
+    with open('model.pkl', 'rb') as f:
+        clf = pickle.load(f)
+    with open('vectorizer.pkl', 'rb') as f:
+        tfidf = pickle.load(f)
 except FileNotFoundError:
     print("Error: model.pkl or vectorizer.pkl not found.")
     clf = None
@@ -26,16 +38,14 @@ except FileNotFoundError:
 
 # --- Text Preprocessing Function ---
 ps = PorterStemmer()
+_stopwords = set(stopwords.words('english'))
 
-def preprocess_text(text):
+def preprocess_text(text: str) -> str:
     text = text.lower()
-    text = nltk.word_tokenize(text)
-    y = [i for i in text if i.isalnum()]
-    text = [
-        ps.stem(i) for i in y 
-        if i not in stopwords.words('english') and i not in string.punctuation
-    ]
-    return " ".join(text)
+    tokens = word_tokenize(text)
+    alnum = [t for t in tokens if t.isalnum()]
+    stemmed = [ps.stem(t) for t in alnum if t not in _stopwords and t not in string.punctuation]
+    return " ".join(stemmed)
 
 # --- Routes ---
 @app.route('/', methods=['GET'])
@@ -47,16 +57,12 @@ def predict():
     prediction_text = "An error occurred."
     if clf and tfidf:
         try:
-            message = request.form['message']
+            message = request.form.get('message', '')
             if message.strip():
                 transformed_sms = preprocess_text(message)
                 vector_input = tfidf.transform([transformed_sms])
                 result = clf.predict(vector_input)[0]
-                
-                if result == 1:
-                    prediction_text = "🚨 SPAM!"
-                else:
-                    prediction_text = "✅ Not Spam."
+                prediction_text = "🚨 SPAM!" if result == 1 else "✅ Not Spam."
             else:
                 prediction_text = "Please enter a message to analyze."
         except Exception as e:
@@ -67,7 +73,5 @@ def predict():
     return render_template('index.html', prediction_text=prediction_text)
 
 if __name__ == '__main__':
-    import os
-    part=int(os.environ.get("PORT",5000))
-    app.run(host="0.0.0.0",port=port,debug=False)
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
